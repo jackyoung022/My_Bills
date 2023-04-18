@@ -1,8 +1,18 @@
-from flask import Flask, render_template, request, g, jsonify
+from flask import Flask, render_template, request, g, jsonify, redirect
 import sqlite3
-
+import os
 app = Flask(__name__)
-
+if not os.path.exists('myDB.db'):
+    conn = sqlite3.connect('myDB.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE bills
+                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                category TEXT NOT NULL,
+                amount REAL NOT NULL
+                )''')
+    conn.commit()
+    conn.close()
 # 连接数据库
 def get_db():
     if 'db' not in g:
@@ -24,8 +34,14 @@ def init_db():
     db.commit()
 
 # 处理表单提交
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def index():
+    return render_template('index.html')
+
+@app.route('/submit', methods=['POST'])
+def submit():
+    # 处理表单提交请求
+    # ...
     if request.method == 'POST':
         date = request.form['date']
         category = request.form['category']
@@ -35,29 +51,28 @@ def index():
         db = get_db()
         db.execute("INSERT INTO bills (date, category, amount) VALUES (?, ?, ?)", (date, category, amount))
         db.commit()
-
-
-    return render_template('index.html')
+    # 返回重定向响应
+    return redirect('/')
 
 # 获取数据并返回JSON格式数据
 @app.route('/data')
 def get_data():
     db = get_db()
-    cur = db.execute("SELECT category, SUM(amount) AS total, date FROM bills WHERE date BETWEEN date('now', 'start of month') AND date('now', 'start of month', '+1 month', '-1 day') GROUP BY category ORDER BY date")
+    cur = db.execute("SELECT category, SUM(amount) AS total FROM bills GROUP BY category;")
     data = cur.fetchall()
+    if not data:
+        return jsonify(labels=[], values=[], time_range='')
     labels = []
     values = []
     for row in data:
         labels.append(row['category'])
         values.append(row['total'])
-    time_range = f'{data[0][2]}至{data[-1][2]}'
-    # response = {
-    #     "time_range": time_range,
-    #     "data": {
-    #         "labels": labels,
-    #         "values": values
-    #     }
-    # }
+    cur = db.execute("SELECT date FROM bills WHERE date BETWEEN date('now', '-30 days') and date('now') ORDER BY date;")
+    data = cur.fetchall()
+    dates = []
+    for row in data:
+        dates.append(row[0])
+    time_range = f'{dates[0]}to{dates[-1]}'
     return jsonify(labels=labels, values=values, time_range=time_range)
 
 if __name__ == '__main__':
