@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g, jsonify, redirect
+from flask import Flask, render_template, request, g, jsonify, redirect, url_for
 import sqlite3
 import os
 app = Flask(__name__)
@@ -51,11 +51,11 @@ def submit():
         db = get_db()
         db.execute("INSERT INTO bills (date, category, amount) VALUES (?, ?, ?)", (date, category, amount))
         db.commit()
-    # 返回重定向响应
-    return redirect('/')
+        # 返回重定向响应
+        return redirect(url_for("index"))
 
 # 获取数据并返回JSON格式数据
-@app.route('/data')
+@app.route('/data', methods=['POST', 'GET'])
 def get_data():
     db = get_db()
     cur = db.execute("SELECT category, SUM(amount) AS total FROM bills GROUP BY category;")
@@ -72,7 +72,7 @@ def get_data():
     dates = []
     for row in data:
         dates.append(row[0])
-    time_range = f'{dates[0]}to{dates[-1]}'
+    time_range = f'{dates[0]} to {dates[-1]}'
     return jsonify(labels=labels, values=values, time_range=time_range)
 
 if __name__ == '__main__':

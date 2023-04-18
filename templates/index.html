@@ -1,110 +1,153 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>日常账单记录</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
-</head>
-<body onload="showChart()">
+  </head>
+  <body onload="showChart()">
     <h1>日常账单记录</h1>
     <div class="container">
-        <form method="post" action="/submit" id="expense-form">
-            <label for="date">日期：</label>
-            <input type="date" id="date" name="date"><br><br>
-            <label for="category">类别：</label>
-            <select id="category" name="category">
-                <option value="food">食物</option>
-                <option value="transportation">交通</option>
-                <option value="housing">住房</option>
-                <option value="entertainment">娱乐</option>
-                <option value="others">其他</option>
-            </select><br><br>
-            <label for="amount">金额：</label>
-            <input type="number" id="amount" name="amount"><br><br>
-            <input type="submit" value="提交" onclick="showMessage()">
-        </form>
-        <br>
-        <h2>账单统计图表</h2>
-        <canvas id="chart"></canvas>
+      <form method="post" action="/submit" id="expense-form" onsubmit="showChart()">
+        <label for="date">日期：</label>
+        <input type="date" id="date" name="date" /><br /><br />
+        <label for="category">类别：</label>
+        <select id="category" name="category">
+          <option value="food">食物</option>
+          <option value="transportation">交通</option>
+          <option value="housing">住房</option>
+          <option value="entertainment">娱乐</option>
+          <option value="others">其他</option></select
+        ><br /><br />
+        <label for="amount">金额：</label>
+        <input type="number" id="amount" name="amount" /><br /><br />
+        <input type="submit" value="提交" onclick="showMessage()" />
+      </form>
+      <br />
+      <h2>账单统计图表</h2>
+      <canvas id="chart"></canvas>
     </div>
-    
-    
-    
 
     <script>
-        // 获取表单元素
-        var expenseForm = document.getElementById('expense-form');
+      // 定义全局变量myChart
+      var myChart
 
-        // 监听表单提交事件
-        expenseForm.addEventListener('submit', function(event) {
-            // 阻止表单默认提交行为
-            event.preventDefault();
+      function showChart() {
+        // 获取数据
+        fetch('/data')
+          .then(response => response.json())
+          .then(data => {
+            // 统计数据
+            var labels = data.labels
+            var values = data.values
+            var timeRange = data.time_range
 
-            // 提交表单数据
-            fetch('/submit', {
-                method: 'POST',
-                body: new FormData(expenseForm)
+            // 销毁当前的饼图实例
+            if (myChart) {
+              myChart.destroy()
+            }
+
+            // 创建新的饼图实例
+            var ctx = document.getElementById('chart')
+            myChart = new Chart(ctx, {
+              type: 'pie',
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    data: values,
+                    backgroundColor: [
+                      'rgba(255, 99, 132, 0.2)',
+                      'rgba(54, 162, 235, 0.2)',
+                      'rgba(255, 206, 86, 0.2)',
+                      'rgba(75, 192, 192, 0.2)',
+                      'rgba(153, 102, 255, 0.2)'
+                    ],
+                    borderColor: [
+                      'rgba(255, 99, 132, 1)',
+                      'rgba(54, 162, 235, 1)',
+                      'rgba(255, 206, 86, 1)',
+                      'rgba(75, 192, 192, 1)',
+                      'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                  }
+                ]
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: timeRange + '的消费分布'
+                }
+              }
             })
-            .then(response => response.json())
-            .then(data => {
-                // 处理响应数据
-                // ...
-                expenseForm.reset();
-                // 重定向到新的URL
-                // window.location.href = '/success';
-                showChart()
-            });
-        });
-        function showMessage() {
-            alert("数据录入成功");
-        }
+            myChart.update()
+          })
+      }
 
-        function showChart() {
-            // 获取数据
-            fetch('/data')
-                .then(response => response.json())
-                .then(data => {
-                    // 统计数据
-                    var labels = data.labels;
-                    var values = data.values;
-                    var timeRange = data.time_range;
+      expenseForm.addEventListener('submit', function (event) {
+        // 阻止表单默认提交行为
+        event.preventDefault()
 
-                    // 创建饼图
-                    var ctx = document.getElementById('chart');
-                    var myChart = new Chart(ctx, {
-                        type: 'pie',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                data: values,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.2)',
-                                    'rgba(54, 162, 235, 0.2)',
-                                    'rgba(255, 206, 86, 0.2)',
-                                    'rgba(75, 192, 192, 0.2)',
-                                    'rgba(153, 102, 255, 0.2)'
-                                ],
-                                borderColor: [
-                                    'rgba(255, 99, 132, 1)',
-                                    'rgba(54, 162, 235, 1)',
-                                    'rgba(255, 206, 86, 1)',
-                                    'rgba(75, 192, 192, 1)',
-                                    'rgba(153, 102, 255, 1)'
-                                ],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            title: {
-                                display: true,
-                                text: timeRange + '的消费分布'
-                            }
-                        }
-                    });
-                    myChart.update();
-                });
-        }
+        fetch('/submit', {
+          method: 'POST',
+          body: new FormData(expenseForm)
+        })
+          .then(response => response.json())
+          .then(data => {
+            // 统计数据
+            var labels = data.labels
+            var values = data.values
+            var timeRange = data.time_range
 
+            // 销毁当前的饼图实例
+            if (myChart) {
+              myChart.destroy()
+            }
+
+            // 创建新的饼图实例
+            var ctx = document.getElementById('chart')
+            myChart = new Chart(ctx, {
+              type: 'pie',
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    data: values,
+                    backgroundColor: [
+                      'rgba(255, 99, 132, 0.2)',
+                      'rgba(54, 162, 235, 0.2)',
+                      'rgba(255, 206, 86, 0.2)',
+                      'rgba(75, 192, 192, 0.2)',
+                      'rgba(153, 102, 255, 0.2)'
+                    ],
+                    borderColor: [
+                      'rgba(255, 99, 132, 1)',
+                      'rgba(54, 162, 235, 1)',
+                      'rgba(255, 206, 86, 1)',
+                      'rgba(75, 192, 192, 1)',
+                      'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                  }
+                ]
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: timeRange + '的消费分布'
+                }
+              }
+            })
+            myChart.update()
+
+            // 重新绘制饼图
+            showChart()
+          })
+      })
+      function showMessage() {
+        alert('数据录入成功')
+      }
     </script>
-</body>
+  </body>
 </html>
